@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 pub mod year2023 {
     pub mod day1;
+    pub mod day2;
     pub mod day23;
 }
 
@@ -16,7 +17,7 @@ macro_rules! solution {
     ($year:tt, $day:tt) => {
         {
             use $year::$day::main as solution_main;
-            solution_main()
+            solution_main as fn()
         }
     };
 }
@@ -24,6 +25,7 @@ macro_rules! solution {
 fn y2023(day: &str) -> () {
     let solutions_map = HashMap::from([
         ("1", solution!(year2023, day1)),
+        ("2", solution!(year2023, day2)),
         ("23", solution!(year2023, day23))
     ]);
 
@@ -32,7 +34,7 @@ fn y2023(day: &str) -> () {
     //     solution!(year2023, day23)
     // ];
 
-    solutions_map.get(day).expect("Not in solutions map");
+    solutions_map.get(day).expect("Not in solutions map")();
 }
 
 fn main() {
