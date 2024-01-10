@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 
+
 fn parse(input: &str) -> Vec<&str> {
     input.lines().collect()
 }
