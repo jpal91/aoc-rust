@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-const DELTAS: [(i32, i32); 4] = [(-1, 0), (0, 1), (1, 0), (0, -1)];
+const DELTAS: [(i32, i32); 8] = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)];
 
 
 #[derive(Debug, Clone)]
@@ -9,12 +9,13 @@ pub struct Grid {
     rows: i32,
     cols: i32,
     y: i32,
-    x: i32
+    x: i32,
+    an: bool
 }
 
 
 impl Grid {
-    fn from_string(input: &str) -> Self {
+    pub fn from_string(input: &str, all_neighbors: bool) -> Self {
         let mut grid: Vec<char> = vec![];
         let rows: i32 = input.lines().count().try_into().unwrap();
         let cols: i32 = input.lines().nth(0).unwrap().len().try_into().unwrap();
@@ -32,7 +33,8 @@ impl Grid {
             rows,
             cols,
             y: 0,
-            x: 0
+            x: 0,
+            an: all_neighbors
         }
     }
 
@@ -40,12 +42,12 @@ impl Grid {
         y * self.rows + x
     }
 
-    fn get_cell(&self, y:i32, x:i32) -> &char {
+    pub fn get_cell(&self, y:i32, x:i32) -> &char {
         let loc: i32 = self.convert_coords(y, x);
         &self.grid[loc as usize]
     }
 
-    fn get_neighbor(&self, y: i32, x: i32, offset: i32) -> Option<(i32, i32)> {
+    pub fn get_neighbor(&self, y: i32, x: i32, offset: i32) -> Option<(i32, i32)> {
         let (dy, dx) = DELTAS[offset as usize];
         let new_y = dy + y;
         let new_x = dx + x;
@@ -63,10 +65,15 @@ impl Grid {
         
     }
 
-    fn get_neighbors(&self, y: i32, x: i32) -> Vec<(i32, i32)> {
+    pub fn get_neighbors(&self, y: i32, x: i32) -> Vec<(i32, i32)> {
         let mut neighbors: Vec<(i32, i32)> = vec![];
 
-        for i in 0..4 {
+
+        for i in 0..8 {
+            if !self.an && i % 2 != 0 {
+                continue
+            };
+
             if let Some(n) = self.get_neighbor(y, x, i) {
                 neighbors.push(n)
             }
@@ -75,11 +82,11 @@ impl Grid {
         neighbors
     }
 
-    fn iter(&self) -> std::slice::Iter<'_, char>{
+    pub fn iter(&self) -> std::slice::Iter<'_, char>{
         self.grid.iter()
     }
 
-    fn iter_enum(&self) -> GridIter<'_> {
+    pub fn iter_enum(&self) -> GridIter<'_> {
         GridIter {
             grid: &self.grid,
             rows: self.rows,
@@ -90,7 +97,7 @@ impl Grid {
     }
 }
 
-struct GridIter<'a> {
+pub struct GridIter<'a> {
     grid: &'a Vec<char>,
     rows: i32,
     cols: i32,
@@ -141,7 +148,8 @@ mod tests {
             rows: 3,
             cols: 3,
             y: 0,
-            x: 0
+            x: 0,
+            an: false
         }
     }
 
