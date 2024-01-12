@@ -13,6 +13,7 @@ pub mod year2023 {
     pub mod day3;
     pub mod day4;
     pub mod day5;
+    pub mod day6;
     pub mod day23;
 }
 
@@ -46,6 +47,7 @@ fn y2023(day: &str) -> () {
         ("3", solution!(year2023, day3)),
         ("4", solution!(year2023, day4)),
         ("5", solution!(year2023, day5)),
+        ("6", solution!(year2023, day6)),
         ("23", solution!(year2023, day23))
     ]);
 
