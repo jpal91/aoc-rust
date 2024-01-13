@@ -1,3 +1,4 @@
+#![allow(unused)]
 
 use std::env;
 use std::collections::HashMap;
@@ -5,7 +6,9 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 // use std::process::Command;
 
-
+pub mod year2022 {
+    pub mod day1;
+}
 
 pub mod year2023 {
     pub mod day1;
@@ -41,6 +44,14 @@ macro_rules! time_it {
     };
 }
 
+fn y2022(day: &str) -> () {
+    let solutions_map = HashMap::from([
+        ("1", solution!(year2022, day1)),
+    ]);
+
+    solutions_map.get(day).expect("Not in solutions map")();
+}
+
 fn y2023(day: &str) -> () {
     let solutions_map = HashMap::from([
         ("1", solution!(year2023, day1)),
@@ -73,7 +84,8 @@ fn main() {
     println!("{} {}", "Running Day", &day);
     
     // solution!(year2023, day1)
-    y2023(&day)
+    // y2023(&day)
+    y2022(&day)
 
 }
 
