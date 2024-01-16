@@ -9,6 +9,7 @@ use std::path::PathBuf;
 pub mod year2022 {
     pub mod day1;
     pub mod day2;
+    pub mod day3;
 }
 
 pub mod year2023 {
@@ -49,6 +50,7 @@ fn y2022(day: &str) -> () {
     let solutions_map = HashMap::from([
         ("1", solution!(year2022, day1)),
         ("2", solution!(year2022, day2)),
+        ("3", solution!(year2022, day3)),
     ]);
 
     solutions_map.get(day).expect("Not in solutions map")();
