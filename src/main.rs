@@ -25,6 +25,7 @@ pub mod year2023 {
 
 pub mod utils {
     pub mod grid;
+    pub mod grid2;
 }
 
 macro_rules! solution {
