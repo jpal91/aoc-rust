@@ -2,6 +2,7 @@
 use std::fmt::Debug;
 use std::str::FromStr;
 use std::ops::{Index, IndexMut};
+use std::slice::SliceIndex;
 
 const DELTAS: [(i32, i32); 8] = [
     (-1, 0),
@@ -23,14 +24,14 @@ enum Sided {
 #[derive(PartialEq, Debug)]
 pub struct Grid<T> {
     grid: Vec<Cell<T>>,
-    rows: usize,
-    cols: usize,
+    pub rows: usize,
+    pub cols: usize,
     n_sides: Sided,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Hash, Eq)]
 pub struct Cell<T> {
-    val: T,
+    pub val: T,
     y: i32,
     x: i32,
 }
@@ -103,6 +104,19 @@ where
 
         Grid { grid, rows: self.cols, cols: self.rows, n_sides: self.n_sides }
     }
+
+    pub fn neighbors(&self, cell: &Cell<T>) -> Vec<&Cell<T>> {
+        cell
+            .neighbors(&self.n_sides)
+            .iter()
+            .filter_map(|(y, x)| {
+                (
+                    *y >= 0 || *y < self.rows as i32 ||
+                    *x >= 0 || *x < self.cols as i32
+                ).then_some(&self[(*y as usize, *x as usize)])
+            })
+            .collect::<Vec<_>>()
+    }
 }
 
 impl<T> Cell<T>
@@ -111,9 +125,21 @@ where
     <T as FromStr>::Err: Debug,
 {
     fn new(input: &str, y: i32, x: i32) -> Self {
-        // eprintln!("{input:?}, {}", input.is_empty());
         let val = input.parse::<T>().unwrap();
         Cell { val, y, x }
+    }
+
+    fn neighbors(&self, n: &Sided) -> Vec<(i32, i32)> {
+        let iter = match n {
+            Sided::Four => DELTAS.iter().step_by(2),
+            Sided::Eight => DELTAS.iter().step_by(1)
+        };
+
+        iter.map(|(y, x)| (self.y + y, self.x + x)).collect()
+    }
+
+    pub fn coords(&self) -> (usize, usize) {
+        (self.y as usize, self.x as usize)
     }
 }
 
@@ -133,6 +159,7 @@ impl<T> IndexMut<(usize, usize)> for Grid<T> {
     }
 }
 
+
 impl<'a, T> Iterator for GridIter<'a, T> {
     type Item = &'a Cell<T>;
 
@@ -145,6 +172,21 @@ impl<'a, T> Iterator for GridIter<'a, T> {
         self.idx += 1;
 
         Some(item)
+    }
+}
+
+trait CellLike<T> 
+where
+    T: FromStr + PartialEq + Default,
+    <T as FromStr>::Err: Debug,
+{
+    fn new<S>(inp: S, y: usize, x: usize) -> Self;
+
+    fn coords(&self) -> (usize, usize);
+
+    fn neighbors(&self) -> Vec<(i32, i32)> {
+        let (row, col) = self.coords();
+        DELTAS.iter().map(|(y, x)| (row as i32 + y, col as i32 + x)).collect()
     }
 }
 
