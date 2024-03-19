@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::utils::grid2::{Grid, Cell};
+use crate::utils::grid2::{Grid, Cell, CellLike};
 
 fn escape<'a: 'b, 'b>(grid: &'a Grid<u8>, cell: &'b Cell<u8>, mut visited: &mut HashSet<&'b Cell<u8>>, height: u8) -> bool {
     if visited.contains(cell) {

@@ -106,9 +106,17 @@ where
     }
 
     pub fn neighbors(&self, cell: &Cell<T>) -> Vec<&Cell<T>> {
-        cell
-            .neighbors(&self.n_sides)
-            .iter()
+        // cell
+        //     .neighbors(&self.n_sides)
+        //     .iter()
+        let neighbors = cell.neighbors();
+
+        let iter = match self.n_sides {
+            Sided::Eight => neighbors.iter().step_by(1),
+            Sided::Four => neighbors.iter().step_by(2)
+        };
+        
+        iter
             .filter_map(|(y, x)| {
                 (
                     *y >= 0 || *y < self.rows as i32 ||
@@ -129,18 +137,18 @@ where
         Cell { val, y, x }
     }
 
-    fn neighbors(&self, n: &Sided) -> Vec<(i32, i32)> {
-        let iter = match n {
-            Sided::Four => DELTAS.iter().step_by(2),
-            Sided::Eight => DELTAS.iter().step_by(1)
-        };
+    // fn neighbors(&self, n: &Sided) -> Vec<(i32, i32)> {
+    //     let iter = match n {
+    //         Sided::Four => DELTAS.iter().step_by(2),
+    //         Sided::Eight => DELTAS.iter().step_by(1)
+    //     };
 
-        iter.map(|(y, x)| (self.y + y, self.x + x)).collect()
-    }
+    //     iter.map(|(y, x)| (self.y + y, self.x + x)).collect()
+    // }
 
-    pub fn coords(&self) -> (usize, usize) {
-        (self.y as usize, self.x as usize)
-    }
+    // pub fn coords(&self) -> (usize, usize) {
+    //     (self.y as usize, self.x as usize)
+    // }
 }
 
 impl<T> Index<(usize, usize)> for Grid<T> {
@@ -175,18 +183,27 @@ impl<'a, T> Iterator for GridIter<'a, T> {
     }
 }
 
-trait CellLike<T> 
+pub trait CellLike<T> 
 where
     T: FromStr + PartialEq + Default,
     <T as FromStr>::Err: Debug,
 {
-    fn new<S>(inp: S, y: usize, x: usize) -> Self;
 
     fn coords(&self) -> (usize, usize);
 
     fn neighbors(&self) -> Vec<(i32, i32)> {
         let (row, col) = self.coords();
         DELTAS.iter().map(|(y, x)| (row as i32 + y, col as i32 + x)).collect()
+    }
+}
+
+impl<T> CellLike<T> for Cell<T> 
+where
+    T: FromStr + PartialEq + Default,
+    <T as FromStr>::Err: Debug,
+{
+    fn coords(&self) -> (usize, usize) {
+        (self.y as usize, self.x as usize)
     }
 }
 
