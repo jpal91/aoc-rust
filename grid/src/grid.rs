@@ -1,6 +1,7 @@
 #![allow(unused)]
 
-use std::ops::{Index, IndexMut};
+use std::fmt::Debug;
+use std::ops::{Deref, Index, IndexMut};
 
 pub type DefaultGrid<T> = Grid<Cell<T>>;
 
@@ -32,8 +33,8 @@ pub struct Grid<C> {
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Cell<T> {
     pub val: T,
-    y: i32,
-    x: i32,
+    y: usize,
+    x: usize,
 }
 
 pub struct GridIter<'i, C> {
@@ -43,7 +44,7 @@ pub struct GridIter<'i, C> {
 
 impl<'g, C> Grid<C>
 where
-    C: CellLike<'g>,
+    C: CellLike<'g> + Debug,
 {
     pub fn new(input: &'g str, neighbors: Sided) -> Self {
         let mut g = input
@@ -52,10 +53,10 @@ where
             .enumerate()
             .map(|(y, l)| {
                 l.trim()
-                    .split(' ')
-                    .filter(|v| !v.is_empty())
+                    .split("")
+                    .filter(|v| !v.trim().is_empty())
                     .enumerate()
-                    .map(|(x, c)| C::new_from_str(c, y as i32, x as i32))
+                    .map(|(x, c)| C::new_from_str(c, y, x))
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
@@ -121,7 +122,7 @@ where
                 iters
                     .iter_mut()
                     .enumerate()
-                    .map(|(x, cell)| cell.next().unwrap().to_owned().new_from_coords(y, x))
+                    .map(|(x, cell)| cell.next().unwrap().to_owned().with_coords(y, x))
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<C>>();
@@ -133,6 +134,88 @@ where
             n_neighbors: self.n_neighbors,
         }
     }
+
+    pub fn add_row(&mut self, first: bool)
+    where
+        C: Default + Clone,
+    {
+        let num_rows = self.rows;
+        let new_row = (0..self.cols).map(|c| {
+            if first {
+                C::default().with_coords(0, c)
+            } else {
+                C::default().with_coords(num_rows + 1, c)
+            }
+        });
+
+        self.rows += 1;
+
+        if !first {
+            self.grid.extend(new_row);
+            return;
+        }
+
+        let updated_grid = self.grid.clone().into_iter().map(|c| {
+            let (y, x) = c.coords();
+            c.with_coords(y + 1, x)
+        });
+
+        self.grid = new_row.chain(updated_grid).collect();
+    }
+
+    pub fn add_col(&mut self, first: bool)
+    where
+        C: Default + Clone,
+    {
+        let num_cols = self.cols;
+        let mut new_col = (0..self.rows).map(|c| {
+            if first {
+                C::default().with_coords(c, 0)
+            } else {
+                C::default().with_coords(c, num_cols + 1)
+            }
+        });
+
+        self.grid = self
+            .grid
+            .chunks_mut(self.cols)
+            .flat_map(|win: &mut [C]| {
+                let next = new_col.next().unwrap();
+                let mut v: Vec<C> = vec![];
+                if first {
+                    v.push(next);
+                    // v.extend_from_slice(win);
+                    win.iter_mut().for_each(|c| c.increment_x());
+                    v.extend_from_slice(win);
+                } else {
+                    v.extend_from_slice(win);
+                    v.push(next);
+                }
+                v
+            })
+            .collect();
+
+        self.cols += 1;
+    }
+
+    // pub fn from_iter<I>(iter: I) -> Self
+    // where
+    //     I: Iterator,
+    //     <I as Iterator>::Item: AsRef<[C]>,
+    //     C: Clone,
+    // {
+    //     let grid = iter.map(|row| row.as_ref().to_vec()).collect::<Vec<_>>();
+    //
+    //     let rows = grid.len();
+    //     let cols = grid.first().unwrap_or(&Vec::new()).len();
+    //
+    //     Self {
+    //         grid: grid.into_iter().flatten().collect(),
+    //         rows,
+    //         cols,
+    //         n_neighbors: Sided::Four,
+    //     }
+    // }
 }
 
 impl<'g, C> Index<(usize, usize)> for Grid<C>
@@ -142,7 +225,8 @@ where
     type Output = C;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
-        let coords = (index.0 + self.rows) + index.1;
+        // let coords = (index.0 * self.rows) + index.1;
+        let coords = (self.cols * index.0) + index.1;
         &self.grid[coords]
     }
 }
@@ -152,7 +236,8 @@ where
     C: CellLike<'g>,
 {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        let coords = (index.0 * self.rows) + index.1;
+        // let coords = (index.0 * self.rows) + index.1;
+        let coords = (self.cols * index.0) + index.1;
         &mut self.grid[coords]
     }
 }
@@ -178,12 +263,44 @@ where
     }
 }
 
-pub trait CellLike<'cell> {
-    fn new_from_str(val: &'cell str, y: i32, x: i32) -> Self;
+impl<T> From<T> for Cell<T> {
+    fn from(value: T) -> Self {
+        Cell {
+            val: value,
+            y: 0,
+            x: 0,
+        }
+    }
+}
 
-    fn new_from_coords(self, y: usize, x: usize) -> Self;
+pub trait CellLike<'cell> {
+    fn new_from_str(val: &'cell str, y: usize, x: usize) -> Self;
+
+    fn with_coords(self, y: usize, x: usize) -> Self;
 
     fn coords(&self) -> (usize, usize);
+
+    fn coords_mut(&mut self) -> (&mut usize, &mut usize);
+
+    fn set_y(&mut self, val: usize) {
+        let (y, _) = self.coords_mut();
+        *y = val;
+    }
+
+    fn set_x(&mut self, val: usize) {
+        let (_, x) = self.coords_mut();
+        *x = val;
+    }
+
+    fn increment_x(&mut self) {
+        let (_, x) = self.coords_mut();
+        *x += 1;
+    }
+
+    fn increment_y(&mut self) {
+        let (y, _) = self.coords_mut();
+        *y += 1;
+    }
 
     fn neighbors(&self) -> Vec<(i32, i32)> {
         let (row, col) = self.coords();
@@ -200,22 +317,29 @@ macro_rules! impl_cell_like {
     ( $($type:ty $(,)?)* ) => {
         $(
             impl CellLike<'_> for Cell<$type> {
-                fn new_from_str(val: &str, y: i32, x: i32) -> Self {
+                fn new_from_str(val: &str, y: usize, x: usize) -> Self {
                     Cell {
                         val: val.trim().parse().unwrap_or_default(),
                         y,
                         x,
                     }
                 }
-                fn new_from_coords(self, y: usize, x: usize) -> Self {
-                    Cell {
-                        val: self.val,
-                        y: y as i32,
-                        x: x as i32,
-                    }
+                fn with_coords(mut self, y: usize, x: usize) -> Self {
+                    // Cell {
+                    //     val: self.val,
+                    //     y: y as i32,
+                    //     x: x as i32,
+                    // }
+                    self.y = y;
+                    self.x = x;
+                    self
                 }
                 fn coords(&self) -> (usize, usize) {
-                    (self.x as usize, self.y as usize)
+                    (self.y, self.x)
+                }
+
+                fn coords_mut(&mut self) -> (&mut usize, &mut usize) {
+                    (&mut self.y, &mut self.x)
                 }
             }
         )*
@@ -225,38 +349,42 @@ macro_rules! impl_cell_like {
 impl_cell_like!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
 
 impl CellLike<'_> for Cell<String> {
-    fn new_from_str(val: &str, y: i32, x: i32) -> Self {
+    fn new_from_str(val: &str, y: usize, x: usize) -> Self {
         Cell {
             val: val.to_owned(),
             y,
             x,
         }
     }
-    fn new_from_coords(self, y: usize, x: usize) -> Self {
-        Cell {
-            val: self.val,
-            y: y as i32,
-            x: x as i32,
-        }
+    fn with_coords(mut self, y: usize, x: usize) -> Self {
+        self.y = y;
+        self.x = x;
+        self
     }
     fn coords(&self) -> (usize, usize) {
-        (self.x as usize, self.y as usize)
+        (self.y, self.x)
+    }
+
+    fn coords_mut(&mut self) -> (&mut usize, &mut usize) {
+        (&mut self.y, &mut self.x)
     }
 }
 
 impl<'cell> CellLike<'cell> for Cell<&'cell str> {
-    fn new_from_str(val: &'cell str, y: i32, x: i32) -> Self {
+    fn new_from_str(val: &'cell str, y: usize, x: usize) -> Self {
         Cell { val, y, x }
     }
-    fn new_from_coords(self, y: usize, x: usize) -> Self {
-        Cell {
-            val: self.val,
-            y: y as i32,
-            x: x as i32,
-        }
+    fn with_coords(mut self, y: usize, x: usize) -> Self {
+        self.y = y;
+        self.x = x;
+        self
     }
     fn coords(&self) -> (usize, usize) {
-        (self.x as usize, self.y as usize)
+        (self.y, self.x)
+    }
+
+    fn coords_mut(&mut self) -> (&mut usize, &mut usize) {
+        (&mut self.y, &mut self.x)
     }
 }
 
@@ -279,7 +407,7 @@ mod tests {
     {
         Grid {
             grid: (0..rows)
-                .flat_map(|i| (0..cols).map(move |j| Cell::new_from_str("0", i as i32, j as i32)))
+                .flat_map(|i| (0..cols).map(move |j| Cell::new_from_str("0", i, j)))
                 .collect(),
             rows,
             cols,
@@ -338,5 +466,39 @@ mod tests {
         }
 
         assert_eq!(last, (4, 4, &Cell { val: 0, y: 4, x: 4 }));
+    }
+
+    #[test]
+    fn add_row_first() {
+        let mut grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
+        grid[(0, 0)].val = 1;
+        grid.add_row(true);
+
+        let mut expect = expected::<u8>(6, 5);
+        expect[(1, 0)].val = 1;
+
+        assert_eq!(grid, expect);
+    }
+
+    #[test]
+    fn add_column() {
+        let mut grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
+        grid[(0, 0)].val = 1;
+        grid.add_col(true);
+
+        let mut expect = expected::<u8>(5, 6);
+        expect[(0, 1)].val = 1;
+
+        assert_eq!(grid, expect);
+    }
+
+    #[test]
+    fn iterator() {
+        // let mut grid: DefaultGrid<u8> = Grid::from_iter([[0, 0, 0], [0, 0, 0], [0, 0, 0]].iter());
+        //
+        // Vec::from
+        // let expect = expected::<u8>(3, 3);
+        //
+        // assert_eq!(grid, expect);
     }
 }
