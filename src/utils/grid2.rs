@@ -22,8 +22,8 @@ enum Sided {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Grid<T> {
-    grid: Vec<Cell<T>>,
+pub struct Grid<C> {
+    grid: Vec<C>,
     pub rows: usize,
     pub cols: usize,
     n_sides: Sided,
@@ -36,19 +36,25 @@ pub struct Cell<T> {
     x: i32,
 }
 
-pub struct GridIter<'a, T> {
-    grid: &'a Vec<Cell<T>>,
+pub struct GridIter<'a, C> {
+    grid: &'a Vec<C>,
     y: usize,
     x: usize,
     idx: usize,
 }
 
-impl<T> Grid<T>
+impl<C> Grid<C>
 where
-    T: FromStr + PartialEq + Clone + Default + Debug,
-    <T as FromStr>::Err: Debug,
+    C: CellLike<C>
+    // T: FromStr + PartialEq + Clone + Default + Debug,
+    // <C as FromStr>::Err: Debug,
+    
 {
-    pub fn new(input: &str) -> Self {
+    pub fn new(input: &str) -> Self 
+    where
+        C: FromStr + PartialEq + Clone + Default + Debug,
+        <C as FromStr>::Err: Debug,
+    {
         let mut g = input
             .trim()
             .lines()
@@ -59,7 +65,7 @@ where
                     .split("")
                     .filter(|v| !v.is_empty())
                     .enumerate()
-                    .map(|(x, c)| Cell::<T>::new(c, y as i32, x as i32))
+                    .map(|(x, c)| Cell::<C>::new(c, y as i32, x as i32))
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
@@ -80,7 +86,7 @@ where
         }
     }
 
-    pub fn iter(&self) -> GridIter<'_, T> {
+    pub fn iter(&self) -> GridIter<'_, C> {
         GridIter {
             grid: &self.grid,
             idx: 0,
@@ -100,12 +106,16 @@ where
                     .map(|(x, n)| Cell{ val: n.next().unwrap().val.to_owned(), y: y as i32, x: x as i32 })
                     .collect::<Vec<_>>()
             })
-            .collect::<Vec<Cell<T>>>();
+            .collect::<Vec<Cell<C>>>();
 
         Grid { grid, rows: self.cols, cols: self.rows, n_sides: self.n_sides }
     }
 
-    pub fn neighbors(&self, cell: &Cell<T>) -> Vec<&Cell<T>> {
+    pub fn neighbors(&self, cell: &Cell<C>) -> Vec<&Cell<C>> 
+    // where
+    //     T: FromStr + PartialEq + Clone + Default + Debug,
+    //     <T as FromStr>::Err: Debug,
+    {
         // cell
         //     .neighbors(&self.n_sides)
         //     .iter()
@@ -129,7 +139,7 @@ where
 
 impl<T> Cell<T>
 where
-    T: FromStr + PartialEq + Default,
+    T: FromStr + PartialEq + Clone + Default + Debug,
     <T as FromStr>::Err: Debug,
 {
     fn new(input: &str, y: i32, x: i32) -> Self {
@@ -183,10 +193,7 @@ impl<'a, T> Iterator for GridIter<'a, T> {
     }
 }
 
-pub trait CellLike<T> 
-where
-    T: FromStr + PartialEq + Default,
-    <T as FromStr>::Err: Debug,
+pub trait CellLike<T>
 {
 
     fn coords(&self) -> (usize, usize);
@@ -199,11 +206,17 @@ where
 
 impl<T> CellLike<T> for Cell<T> 
 where
-    T: FromStr + PartialEq + Default,
+    T: FromStr + PartialEq + Default + Debug + Clone,
     <T as FromStr>::Err: Debug,
 {
     fn coords(&self) -> (usize, usize) {
         (self.y as usize, self.x as usize)
+    }
+}
+
+impl<T> From<(&'static str, i32, i32)> for Cell<T> {
+    fn from(value: (&'static str, i32, i32)) -> Self {
+        Cell::<T>::new(value.0, value.1, value.2)
     }
 }
 
