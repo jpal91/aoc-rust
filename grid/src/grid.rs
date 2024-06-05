@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use std::fmt::Debug;
+use std::iter::FromIterator;
 use std::ops::{Deref, Index, IndexMut};
 
 pub type DefaultGrid<T> = Grid<Cell<T>>;
@@ -30,11 +31,15 @@ pub struct Grid<C> {
     n_neighbors: Sided,
 }
 
+pub type Cell<T> = CellInternal<T, ()>;
+pub type CellWithExtras<T, E> = CellInternal<T, E>;
+
 #[derive(Debug, PartialEq, Clone, Default)]
-pub struct Cell<T> {
+pub struct CellInternal<T, E> {
     pub val: T,
     y: usize,
     x: usize,
+    pub extras: E,
 }
 
 pub struct GridIter<'i, C> {
@@ -263,12 +268,67 @@ where
     }
 }
 
+// impl<'cell, C, A> FromIterator<A> for Grid<C>
+// where
+//     C: CellLike<'cell>,
+// {
+//     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
+//         let grid = iter.into_iter().map(|c| {
+//             c.as_ref()
+//                 .into_iter()
+//                 .map(|inner| inner.into())
+//                 .collect::<Vec<_>>()
+//         });
+//     }
+// }
+
 impl<T> From<T> for Cell<T> {
     fn from(value: T) -> Self {
         Cell {
             val: value,
             y: 0,
             x: 0,
+            extras: (),
+        }
+    }
+}
+
+impl<'cell, T, E> CellInternal<T, E>
+where
+    T: Default + Clone + 'cell,
+    E: Default + Clone,
+{
+    pub fn new(val: T, y: usize, x: usize) -> Self {
+        Self::with_extras(val, y, x, Default::default())
+    }
+
+    pub fn with_extras(val: T, y: usize, x: usize, extras: E) -> Self {
+        Self { val, y, x, extras }
+    }
+}
+
+pub trait IntoCell<'cell, T> {
+    fn from_str(val: &'cell str, y: usize, x: usize) -> CellInternal<T, ()>;
+}
+
+impl<'cell> IntoCell<'cell, &'cell str> for &str {
+    fn from_str(val: &'cell str, y: usize, x: usize) -> CellInternal<&'cell str, ()> {
+        CellInternal {
+            val,
+            y,
+            x,
+            extras: (),
+        }
+    }
+}
+
+impl IntoCell<'_, String> for String {
+    fn from_str(val: &'_ str, y: usize, x: usize) -> CellInternal<String, ()> {
+        CellInternal {
+            val: val.to_string(),
+            y,
+            x,
+            extras: (),
         }
     }
 }
@@ -322,6 +382,7 @@ macro_rules! impl_cell_like {
                         val: val.trim().parse().unwrap_or_default(),
                         y,
                         x,
+                        extras: ()
                     }
                 }
                 fn with_coords(mut self, y: usize, x: usize) -> Self {
@@ -354,6 +415,7 @@ impl CellLike<'_> for Cell<String> {
             val: val.to_owned(),
             y,
             x,
+            extras: (),
         }
     }
     fn with_coords(mut self, y: usize, x: usize) -> Self {
@@ -372,7 +434,12 @@ impl CellLike<'_> for Cell<String> {
 
 impl<'cell> CellLike<'cell> for Cell<&'cell str> {
     fn new_from_str(val: &'cell str, y: usize, x: usize) -> Self {
-        Cell { val, y, x }
+        Cell {
+            val,
+            y,
+            x,
+            extras: (),
+        }
     }
     fn with_coords(mut self, y: usize, x: usize) -> Self {
         self.y = y;
@@ -459,13 +526,37 @@ mod tests {
 
         let mut last: (usize, usize, &Cell<u8>) = iter.next().unwrap();
 
-        assert_eq!(last, (0, 0, &Cell { val: 0, y: 0, x: 0 }));
+        assert_eq!(
+            last,
+            (
+                0,
+                0,
+                &Cell {
+                    val: 0,
+                    y: 0,
+                    x: 0,
+                    extras: ()
+                }
+            )
+        );
 
         for i in iter {
             last = i;
         }
 
-        assert_eq!(last, (4, 4, &Cell { val: 0, y: 4, x: 4 }));
+        assert_eq!(
+            last,
+            (
+                4,
+                4,
+                &Cell {
+                    val: 0,
+                    y: 4,
+                    x: 4,
+                    extras: ()
+                }
+            )
+        );
     }
 
     #[test]
