@@ -1,5 +1,5 @@
 #![cfg(test)]
-use crate::grid::*;
+use crate::{cell::*, grid, grid::*};
 
 const TEST_GRID: &str = "\
 0 0 0 0 0
@@ -135,7 +135,7 @@ fn iterator() {
 }
 
 #[derive(Default, Clone, PartialEq, Debug)]
-struct TestExtras;
+struct TestExtras(u8);
 
 #[test]
 fn extras() {
@@ -152,10 +152,10 @@ fn extras() {
         }
     );
 
-    let grid = grid.with_extras(TestExtras);
+    let grid = grid.with_extras(TestExtras(0));
     let cell = &grid[(0, 0)];
 
-    assert_eq!(cell.extras, TestExtras);
+    assert_eq!(cell.extras, TestExtras(0));
 }
 
 #[test]
@@ -226,4 +226,16 @@ fn neighbors_mut() {
         assert_eq!(grid[(y, x)].val, i as u8);
     }
 }
-// }
+
+#[test]
+fn grid_macro() {
+    let grid: DefaultGrid<u8> = Grid::new(TEST_GRID, Sided::Four);
+    let expect = grid!(u8, 5, 5, 4);
+
+    assert_eq!(grid, expect);
+
+    let grid: Grid<i64, TestExtras> = Grid::new_with_specs(5, 5, Some(10), Some(Sided::Eight));
+    let expect = grid!(10 => i64 , 5, 5, TestExtras, 8);
+
+    assert_eq!(grid, expect);
+}
