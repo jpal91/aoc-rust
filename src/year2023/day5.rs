@@ -1,7 +1,7 @@
 #![allow(unused)]
+use regex::Regex;
 use std::collections::VecDeque;
 use std::ops::Range;
-use regex::Regex;
 
 use crate::{get_puzzle, time_it};
 
@@ -15,20 +15,20 @@ struct SliceRange(u64, u64);
 struct Map {
     rlist: Vec<MapRange>,
     min_val: u64,
-    max_val: u64
+    max_val: u64,
 }
 
 #[derive(Debug)]
 struct Almanac {
     maps: Vec<Map>,
     min_val: u64,
-    max_val: u64
+    max_val: u64,
 }
 
 impl SliceRange {
     fn is_valid(&self) -> bool {
         self.0 <= self.1
-    } 
+    }
 }
 
 impl MapRange {
@@ -41,14 +41,10 @@ impl MapRange {
     }
 
     fn get_from_slice(&self, range: &mut SliceRange) -> Option<Vec<SliceRange>> {
-        if 
-            range.0 > self.1 + (self.2 - 1) ||
-            range.1 < self.1 ||
-            !range.is_valid()
-        {
+        if range.0 > self.1 + (self.2 - 1) || range.1 < self.1 || !range.is_valid() {
             return None;
         }
-        
+
         let mut res: Vec<SliceRange> = vec![];
         let mut new_min: u64;
         let new_max = ((self.1 + (self.2 - 1)).min(range.1)) - self.1;
@@ -62,7 +58,6 @@ impl MapRange {
             range.0 = range.1 + 1;
         }
 
-
         res.push(SliceRange(new_min + self.0, new_max + self.0));
 
         // if range.0 < self.1 {
@@ -72,45 +67,38 @@ impl MapRange {
         Some(res)
     }
 
-    fn get_from_slice2(&self, range: SliceRange) -> (Option<Vec<SliceRange>>, Option<Vec<SliceRange>>) {
+    fn get_from_slice2(
+        &self,
+        range: SliceRange,
+    ) -> (Option<Vec<SliceRange>>, Option<Vec<SliceRange>>) {
         let mut res: Vec<SliceRange> = vec![];
         let mut todo: Vec<SliceRange> = vec![];
 
-        if 
-            range.0 > self.1 + (self.2 - 1) ||
-            range.1 < self.1 
-
-        {
+        if range.0 > self.1 + (self.2 - 1) || range.1 < self.1 {
             todo.push(range);
             (None, Some(todo))
-        } else if 
-            range.0 < self.1 &&
-            range.1 > self.1 + (self.2 - 1)
-        {
+        } else if range.0 < self.1 && range.1 > self.1 + (self.2 - 1) {
             todo.extend([
                 SliceRange(range.0, self.1 - 1),
-                SliceRange(self.1 + (self.2 - 1), range.1)
+                SliceRange(self.1 + (self.2 - 1), range.1),
             ]);
             res.push(SliceRange(self.0, self.0 + self.2 - 1));
             (Some(res), Some(todo))
-        } else if 
-            range.0 < self.1
-        {
+        } else if range.0 < self.1 {
             todo.push(SliceRange(range.0, self.1 - 1));
             res.push(SliceRange(self.0, self.0 + (range.1 - self.1)));
             (Some(res), Some(todo))
-        } else if 
-            range.1 > self.1 + (self.2 - 1)
-        {
+        } else if range.1 > self.1 + (self.2 - 1) {
             todo.push(SliceRange(self.1 + (self.2 - 1), range.1));
             res.push(SliceRange(range.1, self.0 + (self.2 - 1)));
             (Some(res), Some(todo))
         } else {
-            res.push(SliceRange(self.0 + (range.0 - self.1), self.0 + (range.1 - self.1)));
+            res.push(SliceRange(
+                self.0 + (range.0 - self.1),
+                self.0 + (range.1 - self.1),
+            ));
             (Some(res), None)
         }
-
-        
     }
 }
 
@@ -119,32 +107,34 @@ impl Map {
         let mut rlist = vec![];
         let mut min_val = u64::MAX - 1;
         let mut max_val = 0;
-        
+
         for line in input.lines() {
             // println!("{line}");
             let nums: Vec<u64> = line
-                .split(" ")
+                .split(' ')
                 .map(|num| num.trim().parse::<u64>().unwrap())
                 .collect();
-            
+
             let map_range = MapRange(nums[0], nums[1], nums[2]);
             // println!("{} {} {}", line, min_val, max_val);
             min_val = min_val.min(map_range.1);
-            max_val = max_val.max((map_range.1 + map_range.2));
-            
+            max_val = max_val.max(map_range.1 + map_range.2);
+
             rlist.push(map_range);
-        };
+        }
 
         Self {
             rlist,
             min_val,
-            max_val
+            max_val,
         }
     }
 
     fn get(&self, val: u64) -> u64 {
-        if val >= self.max_val || val < self.min_val { return val; }
-        
+        if val >= self.max_val || val < self.min_val {
+            return val;
+        }
+
         for r in self.rlist.iter() {
             if let Some(res) = r.get(val) {
                 return res;
@@ -161,7 +151,7 @@ impl Map {
                 res.extend(slices);
             }
         }
-        
+
         if res.is_empty() || range.is_valid() {
             res.push(*range)
         }
@@ -207,8 +197,10 @@ impl Almanac {
     }
 
     fn get(&self, val: u64) -> u64 {
-        if val >= self.max_val || val < self.min_val { return val; }
-        
+        if val >= self.max_val || val < self.min_val {
+            return val;
+        }
+
         let mut cur_val: u64 = val;
 
         for map in self.maps.iter() {
@@ -221,8 +213,6 @@ impl Almanac {
         let mut new_range: Option<Range<u64>> = None;
         let mut lower_bound: Option<u64> = None;
         let mut upper_bound: Option<u64> = None;
-
-        
     }
 
     fn run_range(&self, range: Range<u64>) -> u64 {
@@ -234,14 +224,14 @@ impl Almanac {
 
     fn test(&self) {
         let mut cur_val: u64 = 0;
-        for i in 0..(4294967296 as u64) {
+        for i in 0..4294967296 {
             cur_val = self.get(i)
         }
         println!("{cur_val}")
     }
 
     // fn get_from_range(&self, range: Range<u64>) -> u64 {
-    //     if 
+    //     if
     //         (range.end <= self.min_val) ||
     //         (range.start >= self.max_val)
     //     {
@@ -261,20 +251,20 @@ impl Almanac {
 
     // fn get_from_range(&self, range: Range<u64>) -> u64 {
     //     let mut min_val = u64::MAX;
-        
+
     //     if range.start < self.min_val {
     //         min_val = range.start;
     //     };
 
     //     let new_range = (self.min_val.max(range.start)..self.max_val.min(range.end));
     //     self.run_range(new_range).min(min_val)
-        
+
     // }
 
     fn get_from_range(&self, range: SliceRange) -> u64 {
         // let mut queue: VecDeque<(u64, Vec<SliceRange>)> = VecDeque::new();
         // queue.push_back((0, vec![range]));
-        let mut min_val = u64::MAX -1;
+        let mut min_val = u64::MAX - 1;
 
         // while let Some((map, ranges)) = queue.pop_front() {
         //     if map == 6 {
@@ -285,7 +275,7 @@ impl Almanac {
         //             .unwrap()
         //             .min(min_val);
         //         continue
-        //     }  
+        //     }
 
         //     for r in ranges {
         //         let ns: Vec<SliceRange> = self.maps[map as usize]
@@ -299,8 +289,7 @@ impl Almanac {
             let mut tmp: Vec<SliceRange> = vec![];
             for r in ranges.iter_mut() {
                 tmp.extend(map.get_from_slice2(r));
- 
-            };
+            }
             // println!("{:?}", tmp);
             ranges = tmp;
         }
@@ -318,15 +307,12 @@ impl Almanac {
 fn parse(input: &str) -> (Vec<u64>, Almanac) {
     let mut lines = input.split("\n\n");
     let seeds = lines.next().unwrap();
-    
 
     let seeds_re = Regex::new(r"seeds: (.+)").unwrap();
     let maps = Regex::new(r".+ map:\n([\s\S]+)").unwrap();
 
-    let seeds: Vec<u64> = seeds_re
-        .captures(seeds)
-        .unwrap()[1]
-        .split(" ")
+    let seeds: Vec<u64> = seeds_re.captures(seeds).unwrap()[1]
+        .split(' ')
         .map(|num| num.parse::<u64>().unwrap())
         .collect();
 
@@ -334,16 +320,14 @@ fn parse(input: &str) -> (Vec<u64>, Almanac) {
     let mut almanac = Almanac::new();
 
     for line in lines {
-        
         if let Some(cap) = maps.captures(line) {
             // maps_vec.push(Map::from_string(&cap[1]));
             almanac.add(Map::from_string(&cap[1]));
         }
-    };
+    }
 
     (seeds, almanac)
 }
-
 
 fn solution_pt1(input: &str) -> u64 {
     let (seeds, maps): (Vec<u64>, Almanac) = parse(input);
@@ -362,10 +346,10 @@ fn solution_pt2(input: &str) -> u64 {
     let (seeds, maps): (Vec<u64>, Almanac) = parse(input);
     let mut seed_range: Vec<SliceRange> = vec![];
     let mut min_val = u64::MAX - 1;
-    
+
     for i in (0..seeds.len()).step_by(2) {
         let start = seeds[i];
-        let stop = &start + seeds[i + 1];
+        let stop = start + seeds[i + 1];
         // let range = (start..stop);
         let range = SliceRange(start, stop - 1);
 
@@ -383,9 +367,8 @@ fn solution_pt2(input: &str) -> u64 {
         //     min_val = min_val.min(maps.get(i));
         // }
         min_val = min_val.min(maps.get_from_range(sr));
-        
-    };
-    
+    }
+
     min_val
 }
 
@@ -399,7 +382,7 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST: &'static str = "\
+    const TEST: &str = "\
 seeds: 79 14 55 13
 
 seed-to-soil map:
@@ -435,14 +418,13 @@ humidity-to-location map:
 56 93 4
 ";
 
-
     #[test]
     fn test_parse() {
         let (seeds, maps): (Vec<u64>, Almanac) = parse(TEST);
         assert_eq!(seeds.len(), 4);
         assert_eq!(maps.maps.len(), 7);
         assert_eq!(maps.maps[0].rlist.len(), 2);
-        
+
         assert_eq!(maps.maps[0].get(79), 81);
         assert_eq!(maps.maps[1].get(81), 81);
         assert_eq!(maps.maps[2].get(81), 81);
@@ -463,8 +445,5 @@ humidity-to-location map:
         let res = solution_pt2(TEST);
         assert_eq!(res, 46)
     }
-
-
-
-
 }
+

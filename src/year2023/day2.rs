@@ -17,7 +17,7 @@ struct SubGame(Colors, u32, u32);
 
 struct Game {
     no: u32,
-    games: Vec<SubGame>
+    games: Vec<SubGame>,
 }
 
 fn parse(input: &str) -> Vec<Game> {
@@ -30,12 +30,11 @@ fn parse(input: &str) -> Vec<Game> {
         let mut subg_no: u32 = 0;
 
         for (_, [num, col, sep]) in ginfo.captures_iter(g).map(|c| c.extract()) {
-
             let sg = match col {
                 "blue" => SubGame(Colors::Blue, num.parse::<u32>().unwrap(), subg_no),
                 "red" => SubGame(Colors::Red, num.parse::<u32>().unwrap(), subg_no),
                 "green" => SubGame(Colors::Green, num.parse::<u32>().unwrap(), subg_no),
-                _ => panic!()
+                _ => panic!(),
             };
 
             if sep != "," {
@@ -43,10 +42,10 @@ fn parse(input: &str) -> Vec<Game> {
             };
 
             games.push(sg)
-        };
+        }
         let new_game = Game {
             no: g_no.parse::<u32>().unwrap(),
-            games
+            games,
         };
         res.push(new_game);
     }
@@ -93,7 +92,7 @@ impl Tracker {
             s if self.red > MAX_RED => false,
             s if self.green > MAX_GREEN => false,
             s if self.blue > MAX_BLUE => false,
-            _ => true
+            _ => true,
         }
     }
 
@@ -110,22 +109,18 @@ fn solution_pt1(input: &str) -> u32 {
     for game in games {
         let mut sg_no = game.games[0].2;
         let mut valid: bool = true;
-        
-        for sub in game.games {
 
+        for sub in game.games {
             if sg_no != sub.2 {
                 sg_no = sub.2;
                 if !tracker.check_valid() {
-                    
                     valid = false;
-                    break
+                    break;
                 }
                 tracker.clear();
-                
             }
             tracker.add(sub);
-
-        };
+        }
 
         if valid && tracker.check_valid() {
             sum += game.no;
@@ -144,7 +139,7 @@ fn solution_pt2(input: &str) -> u32 {
     for game in games {
         for sub in game.games {
             tracker.add(sub);
-        };
+        }
         sum_power += tracker.power();
         tracker.clear();
     }
@@ -158,14 +153,13 @@ pub fn main() {
     time_it!("Part 1", solution_pt1(&data));
     time_it!("Part 2", solution_pt2(&data));
     // solution_pt2(&data);
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    const TEST: &'static str = "\
+
+    const TEST: &str = "\
 Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
 Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
 Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
@@ -184,5 +178,5 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
         let res = solution_pt2(TEST);
         assert_eq!(res, 2286)
     }
-
 }
+

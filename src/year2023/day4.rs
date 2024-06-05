@@ -1,6 +1,6 @@
 #![allow(unused)]
-use std::collections::{HashSet, BinaryHeap, HashMap};
 use regex::Regex;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use crate::{get_puzzle, time_it};
 
@@ -11,17 +11,23 @@ fn parse(input: &str) -> Vec<CardGame> {
     let mut res: Vec<CardGame> = vec![];
 
     for (_, [g_num, win, has]) in card_game.captures_iter(input).map(|c| c.extract()) {
-        let win_cards: HashSet<u32> = split_cards.split(win).map(|w| w.trim().parse::<u32>().unwrap()).collect();
-        let have_cards: HashSet<u32> = split_cards.split(has).map(|w| w.trim().parse::<u32>().unwrap()).collect();
+        let win_cards: HashSet<u32> = split_cards
+            .split(win)
+            .map(|w| w.trim().parse::<u32>().unwrap())
+            .collect();
+        let have_cards: HashSet<u32> = split_cards
+            .split(has)
+            .map(|w| w.trim().parse::<u32>().unwrap())
+            .collect();
 
         let new_game = CardGame {
             no: g_num.parse::<u32>().unwrap(),
             win: win_cards,
-            has: have_cards
+            has: have_cards,
         };
 
         res.push(new_game)
-    };
+    }
 
     res
 }
@@ -30,7 +36,7 @@ fn parse(input: &str) -> Vec<CardGame> {
 struct CardGame {
     no: u32,
     win: HashSet<u32>,
-    has: HashSet<u32>
+    has: HashSet<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,14 +51,14 @@ impl CardGame {
         Self {
             no,
             win: HashSet::new(),
-            has: HashSet::new()
+            has: HashSet::new(),
         }
     }
 
     fn get_wins(&self) -> Option<Vec<u32>> {
-        let res: Vec<u32> = self.win
+        let res: Vec<u32> = self
+            .win
             .intersection(&self.has)
-            .into_iter()
             .map(|v| v.to_owned())
             .collect();
 
@@ -61,15 +67,11 @@ impl CardGame {
         } else {
             Some(res)
         }
-
     }
 
     fn get_points_pt1(&self) -> u32 {
         if let Some(res) = self.get_wins() {
-            res    
-                .iter()
-                .skip(1)
-                .fold(1, |acc, _| acc * 2)
+            res.iter().skip(1).fold(1, |acc, _| acc * 2)
         } else {
             0
         }
@@ -80,17 +82,13 @@ impl CardGame {
             GameResult {
                 no: self.no - 1,
                 count: 1,
-                matches:res    
-                    .len()
-                    .try_into()
-                    .unwrap()
+                matches: res.len().try_into().unwrap(),
             }
-            
         } else {
             GameResult {
                 no: self.no - 1,
                 count: 1,
-                matches: 0
+                matches: 0,
             }
         }
     }
@@ -103,7 +101,7 @@ impl Iterator for GameResult {
         if self.matches > 0 {
             let res = Some(self.matches + self.no);
             self.matches -= 1;
-            res      
+            res
         } else {
             None
         }
@@ -112,12 +110,8 @@ impl Iterator for GameResult {
 
 fn solution_pt1(input: &str) -> u32 {
     let games = parse(input);
-    games
-        .iter()
-        .map(|cg: &CardGame| cg.get_points_pt1())
-        .sum()
-} 
-
+    games.iter().map(|cg: &CardGame| cg.get_points_pt1()).sum()
+}
 
 fn solution_pt2(input: &str) -> u32 {
     let mut results: Vec<GameResult> = parse(input)
@@ -126,7 +120,7 @@ fn solution_pt2(input: &str) -> u32 {
         .collect();
     let mut total: u32 = 0;
     let n: usize = results.len();
-    
+
     for i in 0..n {
         let mut result: GameResult = results.get(i).unwrap().clone();
         total += result.count;
@@ -134,15 +128,14 @@ fn solution_pt2(input: &str) -> u32 {
         while let Some(mut r) = result.next() {
             let next_idx: usize = (r as usize);
             if next_idx >= n {
-                continue
+                continue;
             }
             results[next_idx].count += result.count;
         }
     }
-    
+
     total
 }
-
 
 pub fn main() {
     let puzzle = get_puzzle("23", "4");
@@ -154,7 +147,7 @@ pub fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST: &'static str = "\
+    const TEST: &str = "\
 Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
 Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
 Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
@@ -180,3 +173,4 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
         assert_eq!(res, 30)
     }
 }
+
