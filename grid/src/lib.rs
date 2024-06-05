@@ -8,6 +8,6 @@ pub mod prelude {
     pub use super::{
         cell::{Cell, IntoCell},
         grid,
-        grid::{DefaultGrid, Grid, GridIter},
+        grid::{DefaultGrid, Grid, GridIter, Sided},
     };
 }

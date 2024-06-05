@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 const DELTAS: [(i32, i32); 8] = [
     (-1, 0),
     (-1, 1),
@@ -60,6 +62,11 @@ where
         (self.y, self.x)
     }
 
+    pub fn get_neighbor(&self, offset: usize) -> (i32, i32) {
+        let (y, x) = DELTAS[offset];
+        (self.y as i32 + y, self.x as i32 + x)
+    }
+
     pub fn neighbors(&self) -> Vec<(i32, i32)> {
         let (row, col) = self.coords();
         DELTAS
@@ -85,6 +92,14 @@ where
     }
 }
 
+impl<T, E> Deref for Cell<T, E> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.val
+    }
+}
+
 pub trait IntoCell<'cell, T> {
     fn from_str<E>(val: &'cell str, y: usize, x: usize) -> Cell<T, E>
     where
@@ -106,6 +121,15 @@ impl IntoCell<'_, String> for String {
         E: Default + Clone,
     {
         Cell::new(val.to_string(), y, x)
+    }
+}
+
+impl IntoCell<'_, char> for char {
+    fn from_str<E>(val: &'_ str, y: usize, x: usize) -> Cell<char, E>
+    where
+        E: Default + Clone,
+    {
+        Cell::new(val.chars().next().unwrap(), y, x)
     }
 }
 

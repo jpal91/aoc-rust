@@ -144,6 +144,18 @@ where
         (y < self.rows && x < self.cols).then(|| &mut self[(y, x)])
     }
 
+    pub fn get_neighbor(&self, coords: (usize, usize), offset: usize) -> Option<&Cell<T, E>> {
+        if let Some(cell) = self.get_cell(coords.0, coords.1) {
+            let (y, x) = cell.get_neighbor(offset);
+            match (y >= 0, x >= 0) {
+                (true, true) => self.get_cell((y as usize), (x as usize)),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn neighbors<C>(&self, cell: C) -> Vec<&Cell<T, E>>
     where
         C: Into<Vec<(i32, i32)>>,

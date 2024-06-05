@@ -72,9 +72,7 @@ pub fn get_puzzle(year: &str, day: &str) -> String {
     ]
     .iter()
     .collect();
-    let data = read_to_string(&path).expect("Not there");
-
-    data
+    read_to_string(path).expect("Not there")
 }
 
 fn main() {
@@ -84,9 +82,9 @@ fn main() {
         panic!("Need more args")
     };
     let day: &String = &args[1];
-    println!("{} {}", "Running Day", &day);
+    println!("Running day {}", day);
 
     // solution!(year2023, day1)
-    // y2023(&day)
-    y2022(&day)
+    y2023(day)
+    // y2022(day)
 }
