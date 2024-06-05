@@ -25,18 +25,18 @@ pub enum Sided {
 
 #[derive(Debug, PartialEq)]
 pub struct Grid<T, E> {
-    grid: Vec<Cell<T, E>>,
+    pub grid: Vec<Cell<T, E>>,
     pub rows: usize,
     pub cols: usize,
-    n_neighbors: Sided,
-    default: T,
+    pub n_neighbors: Sided,
+    pub default: T,
 }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct Cell<T, E> {
     pub val: T,
-    y: usize,
-    x: usize,
+    pub y: usize,
+    pub x: usize,
     pub extras: E,
 }
 
@@ -126,12 +126,15 @@ where
         (y < self.rows && x < self.cols).then(|| &mut self[(y, x)])
     }
 
-    pub fn neighbors(&self, cell: &Cell<T, E>) -> Vec<&Cell<T, E>> {
-        let neighbors = cell.neighbors();
+    pub fn neighbors<C>(&self, cell: C) -> Vec<&Cell<T, E>>
+    where
+        C: Into<Vec<(i32, i32)>>,
+    {
+        let neighbors: Vec<(i32, i32)> = cell.into();
 
         let iter = match self.n_neighbors {
-            Sided::Four => neighbors.into_iter().step_by(1),
-            Sided::Eight => neighbors.into_iter().step_by(2),
+            Sided::Four => neighbors.into_iter().step_by(2),
+            Sided::Eight => neighbors.into_iter().step_by(1),
         };
 
         iter.filter_map(|(y, x)| {
@@ -144,12 +147,15 @@ where
         .collect::<Vec<_>>()
     }
 
-    pub fn neighbors_mut(&mut self, cell: &Cell<T, E>) -> Vec<&mut Cell<T, E>> {
-        let mut neighbors = cell.neighbors();
+    pub fn neighbors_mut<C>(&mut self, cell: C) -> Vec<&mut Cell<T, E>>
+    where
+        C: Into<Vec<(i32, i32)>>,
+    {
+        let mut neighbors: Vec<(i32, i32)> = cell.into();
 
         let iter = match self.n_neighbors {
-            Sided::Four => neighbors.into_iter().step_by(1),
-            Sided::Eight => neighbors.into_iter().step_by(2),
+            Sided::Four => neighbors.into_iter().step_by(2),
+            Sided::Eight => neighbors.into_iter().step_by(1),
         };
 
         let mut vec: Vec<&mut Cell<T, E>> = vec![];
@@ -157,7 +163,6 @@ where
         let items = iter
             .filter_map(|(y, x)| {
                 if y >= 0 && x >= 0 && (y as usize) < self.rows && (x as usize) < self.cols {
-                    // self.get_cell(y as usize, x as usize).map(|c| *c)
                     Some((y as usize, x as usize))
                 } else {
                     None
@@ -366,6 +371,16 @@ impl<I, E> AsMut<Cell<I, E>> for Cell<I, E> {
     }
 }
 
+impl<T, E> From<&Cell<T, E>> for Vec<(i32, i32)>
+where
+    T: Default + Clone,
+    E: Default + Clone,
+{
+    fn from(value: &Cell<T, E>) -> Self {
+        value.neighbors()
+    }
+}
+
 impl<I, E, A> FromIterator<A> for Grid<I, E>
 where
     I: Default + Clone,
@@ -441,201 +456,3 @@ macro_rules! impl_into_cell {
 }
 
 impl_into_cell!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
-
-#[cfg(test)]
-const TEST_GRID: &str = "\
-0 0 0 0 0
-0 0 0 0 0
-0 0 0 0 0
-0 0 0 0 0
-0 0 0 0 0
-";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn expected<'e, T>(rows: usize, cols: usize) -> Grid<T, ()>
-    where
-        T: IntoCell<'e, T> + Default,
-    {
-        Grid {
-            grid: (0..rows)
-                .flat_map(|i| (0..cols).map(move |j| T::from_str("0", i, j)))
-                .collect(),
-            rows,
-            cols,
-            n_neighbors: Sided::Four,
-            default: T::default(),
-        }
-    }
-
-    #[test]
-    fn basic_grid() {
-        let grid: DefaultGrid<u32> = Grid::new(TEST_GRID, Sided::Four);
-        let expected = expected::<u32>(5, 5);
-        assert_eq!(grid, expected);
-    }
-
-    #[test]
-    fn odd_size() {
-        let grid: DefaultGrid<u32> = Grid::new(
-            &TEST_GRID.lines().take(4).collect::<Vec<_>>().join("\n"),
-            Sided::Four,
-        );
-        let expected = expected::<u32>(4, 5);
-        assert_eq!(grid, expected);
-    }
-
-    #[test]
-    fn diff_types() {
-        let grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
-        let expect = expected::<u8>(5, 5);
-        assert_eq!(grid, expect);
-
-        let grid: DefaultGrid<i16> = Grid::new(TEST_GRID, Sided::Four);
-        let expect = expected::<i16>(5, 5);
-        assert_eq!(grid, expect);
-
-        let grid: DefaultGrid<String> = Grid::new(TEST_GRID, Sided::Four);
-        let expect = expected::<String>(5, 5);
-        assert_eq!(grid, expect);
-
-        let grid: DefaultGrid<&str> = Grid::new(TEST_GRID, Sided::Four);
-        let expect = expected::<&str>(5, 5);
-        assert_eq!(grid, expect);
-    }
-
-    #[test]
-    fn test_iter_enum() {
-        let grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
-
-        let mut iter = grid.iter_enum();
-
-        let mut last: (usize, usize, &Cell<u8, ()>) = iter.next().unwrap();
-
-        assert_eq!(
-            last,
-            (
-                0,
-                0,
-                &Cell {
-                    val: 0,
-                    y: 0,
-                    x: 0,
-                    extras: ()
-                }
-            )
-        );
-
-        for i in iter {
-            last = i;
-        }
-
-        assert_eq!(
-            last,
-            (
-                4,
-                4,
-                &Cell {
-                    val: 0,
-                    y: 4,
-                    x: 4,
-                    extras: ()
-                }
-            )
-        );
-    }
-
-    #[test]
-    fn add_row_first() {
-        let mut grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
-        grid[(0, 0)].val = 1;
-        grid.add_row(true);
-
-        let mut expect = expected::<u8>(6, 5);
-        expect[(1, 0)].val = 1;
-
-        assert_eq!(grid, expect);
-    }
-
-    #[test]
-    fn add_column() {
-        let mut grid = DefaultGrid::<u8>::new(TEST_GRID, Sided::Four);
-        grid[(0, 0)].val = 1;
-        grid.add_col(true);
-
-        let mut expect = expected::<u8>(5, 6);
-        expect[(0, 1)].val = 1;
-
-        assert_eq!(grid, expect);
-    }
-
-    #[test]
-    fn iterator() {
-        let mut grid: DefaultGrid<u8> = Grid::from_iter([[0, 0, 0], [0, 0, 0], [0, 0, 0]]);
-
-        let expect = expected::<u8>(3, 3);
-
-        assert_eq!(grid, expect);
-    }
-
-    #[derive(Default, Clone, PartialEq, Debug)]
-    struct TestExtras;
-
-    #[test]
-    fn extras() {
-        let grid: Grid<u8, ()> = Grid::new(TEST_GRID, Sided::Four);
-        let cell = &grid[(0, 0)];
-
-        assert_eq!(
-            cell,
-            &Cell {
-                val: 0,
-                y: 0,
-                x: 0,
-                extras: ()
-            }
-        );
-
-        let grid = grid.with_extras(TestExtras);
-        let cell = &grid[(0, 0)];
-
-        assert_eq!(cell.extras, TestExtras);
-    }
-
-    #[test]
-    fn default_value() {
-        let mut grid: DefaultGrid<u8> = Grid::new(TEST_GRID, Sided::Four);
-        grid.set_default_value(1);
-        grid.add_row(false);
-
-        assert_eq!(grid[(4, 0)].val, 0);
-        assert_eq!(grid[(5, 0)].val, 1);
-    }
-
-    #[test]
-    fn get_cell() {
-        let mut grid: Grid<u8, ()> = Grid::new(TEST_GRID, Sided::Four);
-        let cell = grid.get_cell(3, 2);
-
-        assert_eq!(
-            cell,
-            Some(&Cell {
-                val: 0,
-                y: 3,
-                x: 2,
-                extras: ()
-            })
-        );
-
-        let cell = grid.get_cell(10, 10);
-
-        assert_eq!(cell, None);
-
-        let cell = grid.get_cell_mut(1, 1).unwrap();
-        cell.val = 10;
-
-        assert_eq!(grid[(1, 1)].val, 10);
-    }
-}
