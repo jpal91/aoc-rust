@@ -7,3 +7,5 @@ edition = "2021"
 [dependencies]
 regex = "1.10.2"
 grid = { version = "*", path = "grid" }
+paste = "1.0.15"
+clap = { version = "4.5.4", features = ["derive"] }
