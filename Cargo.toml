@@ -10,3 +10,4 @@ grid = { version = "*", path = "grid" }
 paste = "1.0.15"
 clap = { version = "4.5.4", features = ["derive"] }
 cached = "0.51.3"
+num-integer = "0.1.46"
