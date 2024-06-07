@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash, ops::Deref};
+use std::{collections::HashMap, hash::Hash, iter::Cycle, ops::Deref, str::Chars};
 
 use num_integer::Integer;
 use regex::Regex;
@@ -119,22 +119,20 @@ fn solution_pt2(input: &str) -> u64 {
     left_right.add_part2();
 
     let mut counts = vec![];
-    let n = left_right.lr.len();
 
     for key in left_right.part2.iter() {
-        let mut idx = 0;
         let mut current = key.clone();
         let mut count = 0;
+        let mut next_direct = left_right.lr.iter().cycle();
 
         while !current.is_z() {
             let item = left_right.map.get(&current).unwrap();
 
-            current = match left_right.lr[idx] {
-                'L' => item.0.clone(),
+            current = match next_direct.next() {
+                Some('L') => item.0.clone(),
                 _ => item.1.clone(),
             };
             count += 1;
-            idx = (idx + 1) % n;
         }
         counts.push(count);
     }
