@@ -118,14 +118,14 @@ where
         }
     }
 
-    pub fn new_four_sided(input: &'static str) -> Self
+    pub fn new_four_sided(input: &'g str) -> Self
     where
         T: IntoCell<'g, T>,
     {
         Self::new(input, Sided::Four)
     }
 
-    pub fn new_eight_sided(input: &'static str) -> Self
+    pub fn new_eight_sided(input: &'g str) -> Self
     where
         T: IntoCell<'g, T>,
     {
@@ -219,6 +219,10 @@ where
             grid: &self.grid,
             idx: 0,
         }
+    }
+
+    pub fn coords_vec(&self) -> Vec<(usize, usize)> {
+        self.grid.iter().map(|c| c.coords()).collect()
     }
 
     pub fn transpose(self) -> Self {
