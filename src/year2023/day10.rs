@@ -7,6 +7,7 @@ use crate::{get_puzzle, time_it};
 
 use ::grid::prelude::{Cell, IntoCell};
 use grid::grid::Sided;
+use num_integer::Roots;
 
 type Grid = ::grid::prelude::Grid<Pipe, Looped>;
 type Coords = (usize, usize);
@@ -25,7 +26,7 @@ enum Pipe {
     Empty,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 enum Direction {
     #[default]
     North,
@@ -97,71 +98,68 @@ impl Direction {
     }
 }
 
-fn can_enter(start: &Direction, dest: &Pipe) -> bool {
+fn can_enter(start: &Direction, source: &Pipe, dest: &Pipe) -> bool {
     use Direction::*;
     use Pipe::*;
+
+    if let Empty = dest {
+        return false;
+    }
 
     matches!(
-        (start, dest),
-        (North, Vert | EastSouth | WestSouth)
-            | (East, Horizon | NorthWest | WestSouth)
-            | (South, Vert | NorthWest | NorthEast)
-            | (West, Horizon | NorthEast | EastSouth)
+        (start, source, dest),
+        (
+            North,
+            Vert | NorthWest | NorthEast | Start,
+            Vert | EastSouth | WestSouth | Start
+        ) | (
+            East,
+            Horizon | NorthEast | EastSouth | Start,
+            Horizon | NorthWest | WestSouth | Start
+        ) | (
+            South,
+            Vert | WestSouth | EastSouth | Start,
+            Vert | NorthWest | NorthEast | Start
+        ) | (
+            West,
+            Horizon | NorthWest | WestSouth | Start,
+            Horizon | NorthEast | EastSouth | Start
+        )
     )
-}
-
-fn new_direction(start: &Direction, dest: &Pipe) -> Direction {
-    use Direction::*;
-    use Pipe::*;
-
-    match (start, dest) {
-        (North, EastSouth) => South,
-        (South, EastSouth) => East,
-        (West, Horizon) => East,
-        (East, Horizon) => West,
-        (West, WestSouth) => South,
-        (South, WestSouth) => West,
-        (North, Vert) => South,
-        (South, Vert) => North,
-        (North, NorthWest) => West,
-        (West, NorthWest) => North,
-        (North, NorthEast) => East,
-        (East, NorthEast) => North,
-        _ => unreachable!(),
-    }
 }
 
 fn bfs(grid: &mut Grid) -> u32 {
     let mut queue: Queue = VecDeque::new();
     let mut visited: HashSet<Coords> = HashSet::new();
+    let mut start_coords = (0, 0);
+    let mut max_dist = 0;
     let mut count = 0;
 
     for cell in grid.iter() {
         if **cell == Pipe::Start {
             let coords = cell.coords();
+            start_coords = coords;
             queue.push_back((coords, 0));
-            visited.insert(coords);
+            // visited.insert(coords);
             break;
         }
     }
 
     while let Some(((y, x), steps)) = queue.pop_front() {
         count = count.max(steps);
+        visited.insert((y, x));
+        grid[(y, x)].extras = Looped::Loop;
 
-        let cell = grid.get_cell_mut(y, x).unwrap();
-        cell.extras = Looped::Loop;
+        let cell = grid.get_cell(y, x).unwrap();
 
-        let neighbor_vec = cell.neighbors();
-
-        for neighbor in grid.neighbors(neighbor_vec) {
+        for neighbor in grid.neighbors(cell) {
             let coords = neighbor.coords();
             let direction = Direction::from_target((y, x), coords);
 
-            if visited.contains(&coords) || !can_enter(&direction, neighbor) {
+            if visited.contains(&coords) || !can_enter(&direction, cell, neighbor) {
                 continue;
             }
 
-            visited.insert(coords);
             queue.push_back((coords, steps + 1));
         }
     }
@@ -209,6 +207,7 @@ fn solution_pt2(input: &str) -> u32 {
 
     let _ = bfs(&mut grid);
     let mut count = 0;
+    let mut escape_coords: Vec<Coords> = vec![];
 
     for (y, x) in grid.coords_vec() {
         let extras = grid[(y, x)].extras.clone();
@@ -218,9 +217,11 @@ fn solution_pt2(input: &str) -> u32 {
             if !try_escape(&mut grid, (y, x)) {
                 grid[(y, x)].extras = In;
                 count += 1;
+                escape_coords.push((y, x));
             }
         }
     }
+    println!("{:?}", escape_coords);
 
     count
 }
@@ -277,6 +278,20 @@ const TEST_FOUR: &str = "\
 ";
 
 #[cfg(test)]
+const TEST_FIVE: &str = "\
+.F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...
+";
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -296,8 +311,25 @@ mod tests {
 
     #[test]
     fn test_solution_pt2() {
-        let res = solution_pt2(TEST_FOUR);
+        let res = solution_pt2(TEST_FIVE);
 
-        assert_eq!(res, 4);
+        assert_eq!(res, 8);
+    }
+
+    #[test]
+    fn test_directions() {
+        assert_eq!(Direction::from_target((3, 2), (3, 3)), Direction::East);
+        assert_eq!(Direction::from_target((4, 4), (5, 4)), Direction::South);
+        assert_eq!(Direction::from_target((6, 7), (5, 7)), Direction::North);
+        assert_eq!(Direction::from_target((8, 2), (8, 1)), Direction::West);
+    }
+
+    #[test]
+    fn test_can_enter() {
+        assert!(can_enter(
+            &Direction::North,
+            &Pipe::NorthWest,
+            &Pipe::WestSouth
+        ));
     }
 }
