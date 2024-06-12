@@ -2,9 +2,10 @@
 
 use clap::Parser;
 use paste::paste;
+use simplelog::{Config, LevelFilter, WriteLogger};
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, read_to_string};
+use std::fs::{self, read_to_string, File};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -51,7 +52,7 @@ macro_rules! aoc {
 
 aoc!(
     2022 => [1, 2, 3],
-    2023 => [1, 2, 3, 4, 5, 6, 7, 8, 10, 17, 23]
+    2023 => [1, 2, 3, 4, 5, 6, 7, 8, 10, 17, 20, 23]
 );
 
 #[macro_export]
@@ -66,6 +67,14 @@ macro_rules! time_it {
 pub fn debug_output<O: AsRef<str>>(output: O, year: usize, day: usize) {
     let path = PathBuf::from_iter(["debug", &format!("y{year}/day{day}.txt")]);
     fs::write(path, output.as_ref()).unwrap();
+}
+
+pub fn debug_output_logger(year: u8, day: usize) {
+    let _ = WriteLogger::init(
+        LevelFilter::Debug,
+        Config::default(),
+        File::create(format!("debug/y{}/day{}.txt", year, day)).unwrap(),
+    );
 }
 
 pub fn get_puzzle(year: &str, day: &str) -> String {
