@@ -3,8 +3,8 @@ use std::hash::Hash;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct QueueItem<T> {
-    cell: T,
-    cost: usize,
+    pub cell: T,
+    pub cost: usize,
 }
 
 pub struct Dijkstra<'d, T> {

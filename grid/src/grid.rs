@@ -137,6 +137,13 @@ where
         self.default = value;
     }
 
+    pub fn find(&self, val: T) -> Option<&Cell<T, E>>
+    where
+        T: PartialEq,
+    {
+        self.grid.iter().find(|&c| c.val == val)
+    }
+
     pub fn get_cell(&self, y: usize, x: usize) -> Option<&Cell<T, E>> {
         (y < self.rows && x < self.cols).then(|| &self[(y, x)])
     }
@@ -201,6 +208,35 @@ where
         iter.map(|(y, x)| {
             if y >= 0 && x >= 0 {
                 self.get_cell(y as usize, x as usize)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+    }
+
+    pub fn neighbors_with_directions<C>(&self, cell: C) -> Vec<Option<(&Cell<T, E>, Direction)>>
+    where
+        C: Into<Vec<(i32, i32)>>,
+    {
+        let neighbors: Vec<(i32, i32)> = cell.into();
+        let directions: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+
+        let iter = match self.n_neighbors {
+            Sided::Four => neighbors
+                .into_iter()
+                .step_by(2)
+                .zip(directions.iter().step_by(2)),
+            Sided::Eight => neighbors
+                .into_iter()
+                .step_by(1)
+                .zip(directions.iter().step_by(1)),
+        };
+
+        iter.map(|((y, x), &direction)| {
+            if y >= 0 && x >= 0 {
+                self.get_cell(y as usize, x as usize)
+                    .map(|cell| (cell, direction.into()))
             } else {
                 None
             }

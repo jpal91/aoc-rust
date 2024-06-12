@@ -240,6 +240,23 @@ impl Deref for Cursor {
     }
 }
 
+impl From<u8> for Direction {
+    fn from(value: u8) -> Self {
+        use Direction::*;
+
+        match value {
+            1 => NorthEast,
+            2 => East,
+            3 => SouthEast,
+            4 => South,
+            5 => SouthWest,
+            6 => West,
+            7 => NorthWest,
+            _ => North,
+        }
+    }
+}
+
 pub trait Directional {
     fn left(&self) -> Direction;
 
