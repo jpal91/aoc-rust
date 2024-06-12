@@ -7,6 +7,7 @@ use std::ops::{Deref, Index, IndexMut};
 use crate::cell::*;
 
 pub type DefaultGrid<T> = Grid<T, ()>;
+pub type Coords = (usize, usize);
 
 #[derive(Debug, PartialEq)]
 pub enum Sided {
@@ -144,6 +145,15 @@ where
         (y < self.rows && x < self.cols).then(|| &mut self[(y, x)])
     }
 
+    pub fn get_cell_signed(&self, coords: (i32, i32)) -> Option<&Cell<T, E>> {
+        let (y, x) = coords;
+        if (y >= 0 && x >= 0 && y < (self.rows as i32) && x < (self.cols as i32)) {
+            Some(&self[(y as usize, x as usize)])
+        } else {
+            None
+        }
+    }
+
     pub fn get_neighbor(&self, coords: (usize, usize), offset: usize) -> Option<&Cell<T, E>> {
         if let Some(cell) = self.get_cell(coords.0, coords.1) {
             let (y, x) = cell.get_neighbor(offset);
@@ -168,6 +178,27 @@ where
         };
 
         iter.filter_map(|(y, x)| {
+            if y >= 0 && x >= 0 {
+                self.get_cell(y as usize, x as usize)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>()
+    }
+
+    pub fn all_neighbors<C>(&self, cell: C) -> Vec<Option<&Cell<T, E>>>
+    where
+        C: Into<Vec<(i32, i32)>>,
+    {
+        let neighbors: Vec<(i32, i32)> = cell.into();
+
+        let iter = match self.n_neighbors {
+            Sided::Four => neighbors.into_iter().step_by(2),
+            Sided::Eight => neighbors.into_iter().step_by(1),
+        };
+
+        iter.map(|(y, x)| {
             if y >= 0 && x >= 0 {
                 self.get_cell(y as usize, x as usize)
             } else {

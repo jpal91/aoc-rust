@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::ops::Deref;
 
 const DELTAS: [(i32, i32); 8] = [
@@ -11,12 +12,31 @@ const DELTAS: [(i32, i32); 8] = [
     (-1, -1),
 ];
 
-#[derive(Debug, PartialEq, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Default)]
 pub struct Cell<T, E> {
     pub val: T,
     pub y: usize,
     pub x: usize,
     pub extras: E,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Default, Copy)]
+pub struct Cursor {
+    pub coords: (i32, i32),
+    pub direction: Direction,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Default, Copy)]
+pub enum Direction {
+    #[default]
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
 }
 
 impl<'cell, T, E> Cell<T, E>
@@ -150,4 +170,112 @@ macro_rules! impl_into_cell {
     };
 }
 
-impl_into_cell!(u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64);
+impl_into_cell!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, f32, f64);
+
+impl Cursor {
+    pub fn new(coords: (i32, i32), direction: Direction) -> Self {
+        Self { coords, direction }
+    }
+
+    pub fn forward(&self) -> Self {
+        let coords = match self.direction {
+            Direction::North => (self.coords.0 - 1, self.coords.1),
+            Direction::South => (self.coords.0 + 1, self.coords.1),
+            Direction::East => (self.coords.0, self.coords.1 + 1),
+            Direction::West => (self.coords.0, self.coords.1 - 1),
+            _ => unimplemented!(),
+        };
+
+        Self {
+            coords,
+            direction: self.direction,
+        }
+    }
+
+    pub fn left(&self) -> Self {
+        let (y, x) = self.coords;
+        let (direction, coords) = match self.direction {
+            Direction::North => (Direction::West, (y, x - 1)),
+            Direction::East => (Direction::North, (y - 1, x)),
+            Direction::South => (Direction::East, (y, x + 1)),
+            Direction::West => (Direction::South, (y + 1, x)),
+            _ => unimplemented!(),
+        };
+
+        Self { direction, coords }
+    }
+
+    pub fn right(&self) -> Self {
+        let (y, x) = self.coords;
+        let (direction, coords) = match self.direction {
+            Direction::North => (Direction::East, (y, x + 1)),
+            Direction::East => (Direction::South, (y + 1, x)),
+            Direction::South => (Direction::West, (y, x - 1)),
+            Direction::West => (Direction::North, (y - 1, x)),
+            _ => unimplemented!(),
+        };
+
+        Self { direction, coords }
+    }
+
+    pub fn reverse(&self) -> Self {
+        let (y, x) = self.coords;
+        let (direction, coords) = match self.direction {
+            Direction::North => (Direction::South, (y + 1, x)),
+            Direction::East => (Direction::West, (y, x - 1)),
+            Direction::South => (Direction::North, (y - 1, x)),
+            Direction::West => (Direction::East, (y, x + 1)),
+            _ => unimplemented!(),
+        };
+
+        Self { direction, coords }
+    }
+}
+
+impl Deref for Cursor {
+    type Target = (i32, i32);
+
+    fn deref(&self) -> &Self::Target {
+        &self.coords
+    }
+}
+
+pub trait Directional {
+    fn left(&self) -> Direction;
+
+    fn right(&self) -> Direction;
+
+    fn reverse(&self) -> Direction;
+}
+
+impl<T> Directional for Cell<T, Direction> {
+    fn left(&self) -> Direction {
+        match self.extras {
+            Direction::East => Direction::North,
+            Direction::South => Direction::East,
+            Direction::West => Direction::South,
+            Direction::North => Direction::West,
+            _ => unreachable!(),
+        }
+    }
+
+    fn right(&self) -> Direction {
+        match self.extras {
+            Direction::East => Direction::South,
+            Direction::South => Direction::West,
+            Direction::West => Direction::North,
+            Direction::North => Direction::East,
+            _ => unreachable!(),
+        }
+    }
+
+    fn reverse(&self) -> Direction {
+        match self.extras {
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+            Direction::North => Direction::South,
+            _ => unreachable!(),
+        }
+    }
+}
