@@ -14,6 +14,10 @@ struct Args {
     #[arg(short, long, default_value = "2023")]
     year: u32,
 
+    /// Add new file
+    #[arg(short, long)]
+    new: bool,
+
     /// Target day
     day: String,
 }
@@ -52,7 +56,7 @@ macro_rules! aoc {
 
 aoc!(
     2022 => [1, 2, 3],
-    2023 => [1, 2, 3, 4, 5, 6, 7, 8, 10, 17, 20, 21, 23]
+    2023 => [1, 2, 3, 4, 5, 6, 7, 8, 10, 17, 19, 20, 21, 23]
 );
 
 #[macro_export]
@@ -82,6 +86,31 @@ pub fn get_puzzle(year: &str, day: &str) -> String {
     read_to_string(path).expect("Not there")
 }
 
+const BOILERPLATE: fn(u8, u8) -> String = |year: u8, day: u8| {
+    format!(
+        r##"
+use crate::{{get_puzzle, time_it}};
+
+pub fn main() {{
+    // let puzzle = get_puzzle("{year}", "{day}");
+    //
+    // time_it!("Solution Pt 1", solution_pt1(&puzzle));
+    // time_it!("solution Pt 2", solution_pt2(&puzzle));
+}}
+"##
+    )
+};
+
+fn new_file(year: u8, day: u8) {
+    let path = PathBuf::from(format!("src/year20{}/day{}.rs", year, day));
+    if path.exists() {
+        panic!("Path already exists!")
+    }
+
+    fs::write(path, BOILERPLATE(year, day)).unwrap();
+    println!("Created - Year 20{}, Day {}", year, day);
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -90,6 +119,11 @@ fn main() {
         2022 | 22 => y2022,
         y => panic!("Invalid year {}", y),
     };
+
+    if args.new {
+        new_file((args.year % 2000) as u8, args.day.parse().unwrap());
+        return;
+    }
 
     println!("Running Day: {}, Year: {}", &args.day, args.year);
 
